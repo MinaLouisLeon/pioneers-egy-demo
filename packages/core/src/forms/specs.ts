@@ -250,13 +250,29 @@ export const TASK_FORM_SPECS = {
   env_option_3: environmentalSpec("env_option_3", "Option 3"),
 } as const satisfies Record<TaskSubtype, TaskFormSpec>;
 
+/**
+ * Look up a spec, failing loudly on an unknown subtype.
+ *
+ * The lookup used to be a bare index, so a bad value surfaced as
+ * "Cannot read properties of undefined (reading 'defaults')" several frames
+ * away from the actual mistake. Callers should still validate with
+ * `isTaskSubtype`; this is the backstop that names the culprit.
+ */
 export function getTaskFormSpec(subtype: TaskSubtype): TaskFormSpec {
-  return TASK_FORM_SPECS[subtype];
+  const spec = TASK_FORM_SPECS[subtype];
+  if (!spec) {
+    throw new Error(
+      `Unknown inspection task subtype "${subtype}". Expected one of: ${Object.keys(
+        TASK_FORM_SPECS,
+      ).join(", ")}.`,
+    );
+  }
+  return spec;
 }
 
 /** Blank `data` for a newly added task. Returns a fresh object each call. */
 export function createTaskDefaults(subtype: TaskSubtype): Record<string, unknown> {
-  return { ...TASK_FORM_SPECS[subtype].defaults };
+  return { ...getTaskFormSpec(subtype).defaults };
 }
 
 /**
@@ -264,5 +280,5 @@ export function createTaskDefaults(subtype: TaskSubtype): Record<string, unknown
  * photos in a gallery rather than inline with the text fields.
  */
 export function dataFieldsFor(subtype: TaskSubtype) {
-  return TASK_FORM_SPECS[subtype].fields.filter((field) => field.kind !== "photos");
+  return getTaskFormSpec(subtype).fields.filter((field) => field.kind !== "photos");
 }

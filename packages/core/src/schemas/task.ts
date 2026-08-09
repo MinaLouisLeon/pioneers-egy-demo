@@ -41,6 +41,28 @@ export function categoryForSubtype(subtype: TaskSubtype): TaskCategory {
     : "environmental";
 }
 
+/**
+ * Type guards for values arriving from a UI control.
+ *
+ * A `<Select>` hands back a plain string, and Radix in particular emits `""`
+ * when its current value is no longer among its items — which happens for one
+ * render while the category dropdown is swapping the type list underneath it.
+ * Feeding that straight into TASK_FORM_SPECS crashes the dialog, so callers
+ * filter through these first.
+ */
+export function isTaskCategory(value: string): value is TaskCategory {
+  return (TASK_CATEGORIES as readonly string[]).includes(value);
+}
+
+export function isTaskSubtype(value: string): value is TaskSubtype {
+  return (TASK_SUBTYPES as readonly string[]).includes(value);
+}
+
+/** True when the subtype is offered under that category. */
+export function isSubtypeInCategory(subtype: string, category: TaskCategory): boolean {
+  return (SUBTYPES_BY_CATEGORY[category] as readonly string[]).includes(subtype);
+}
+
 // ---------------------------------------------------------------------------
 // NDT methods
 // ---------------------------------------------------------------------------

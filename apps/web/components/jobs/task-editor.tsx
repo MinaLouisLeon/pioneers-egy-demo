@@ -14,6 +14,9 @@ import {
   TASK_CATEGORIES,
   TASK_DATA_SCHEMAS,
   categoryForSubtype,
+  isSubtypeInCategory,
+  isTaskCategory,
+  isTaskSubtype,
   type TaskCategory,
   type TaskSubtype,
 } from "@pioneers/core/schemas";
@@ -122,22 +125,31 @@ export function TaskEditorDialog({
   }, [open, task, form]);
 
   function handleCategoryChange(value: string) {
-    const nextCategory = value as TaskCategory;
-    setCategory(nextCategory);
+    if (!isTaskCategory(value)) return;
+    setCategory(value);
 
     // Jump to the first type in the new category so the form is never left
     // showing fields that do not belong to the selected category.
-    const firstSubtype = SUBTYPES_BY_CATEGORY[nextCategory][0]!;
+    const firstSubtype = SUBTYPES_BY_CATEGORY[value][0]!;
     setSubtype(firstSubtype);
     form.reset({ data: createTaskDefaults(firstSubtype) });
   }
 
   function handleSubtypeChange(value: string) {
-    const nextSubtype = value as TaskSubtype;
-    setSubtype(nextSubtype);
+    /*
+     * Radix emits onValueChange("") when its current value is not among its
+     * items. That happened for one render after the category switched — the
+     * type list had not been re-rendered yet — and the empty string used to
+     * reach createTaskDefaults and crash the dialog. The `key` on the trigger
+     * below prevents the transient state; this guard makes it impossible to
+     * regress.
+     */
+    if (!isTaskSubtype(value) || !isSubtypeInCategory(value, category)) return;
+
+    setSubtype(value);
     // Field sets are disjoint between subtypes, so carrying values across would
     // leave stale keys in the JSONB blob.
-    form.reset({ data: createTaskDefaults(nextSubtype) });
+    form.reset({ data: createTaskDefaults(value) });
   }
 
   async function onSubmit(values: { data: Record<string, unknown> }) {
@@ -217,7 +229,13 @@ export function TaskEditorDialog({
               <FormLabel>
                 Type<span className="text-destructive">*</span>
               </FormLabel>
-              <Select value={subtype} onValueChange={handleSubtypeChange}>
+              {/*
+                Keyed on the category so the whole Select remounts when the
+                category changes. Without this it re-renders once holding the
+                new value against the old item list, which makes Radix reset
+                the value to "".
+              */}
+              <Select key={category} value={subtype} onValueChange={handleSubtypeChange}>
                 <FormControl>
                   <SelectTrigger className="w-full">
                     <SelectValue />

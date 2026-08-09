@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { TASK_FORM_SPECS, createTaskDefaults, dataFieldsFor } from "../forms/specs";
 import {
+  TASK_FORM_SPECS,
+  createTaskDefaults,
+  dataFieldsFor,
+  getTaskFormSpec,
+} from "../forms/specs";
+import {
+  SUBTYPES_BY_CATEGORY,
   TASK_SUBTYPES,
   categoryForSubtype,
+  isSubtypeInCategory,
+  isTaskCategory,
+  isTaskSubtype,
   parseTaskData,
   taskDraftSchema,
   type TaskSubtype,
@@ -69,6 +78,54 @@ describe("TASK_FORM_SPECS", () => {
         }
       }
     }
+  });
+});
+
+/**
+ * Regression: switching the category dropdown to "Environmental" crashed the
+ * task dialog. Radix Select emits onValueChange("") when its value is no longer
+ * among its items, and that empty string reached the spec lookup.
+ */
+describe("guards against values arriving from a UI control", () => {
+  it("rejects the empty string Radix emits when its value is cleared", () => {
+    expect(isTaskSubtype("")).toBe(false);
+    expect(isTaskCategory("")).toBe(false);
+  });
+
+  it("rejects arbitrary strings", () => {
+    expect(isTaskSubtype("lifting ")).toBe(false);
+    expect(isTaskSubtype("environmental")).toBe(false);
+    expect(isTaskCategory("lifting")).toBe(false);
+  });
+
+  it("accepts every real subtype and category", () => {
+    for (const subtype of TASK_SUBTYPES) expect(isTaskSubtype(subtype)).toBe(true);
+    expect(isTaskCategory("inspection")).toBe(true);
+    expect(isTaskCategory("environmental")).toBe(true);
+  });
+
+  it("knows which subtypes belong to which category", () => {
+    expect(isSubtypeInCategory("lifting", "inspection")).toBe(true);
+    expect(isSubtypeInCategory("lifting", "environmental")).toBe(false);
+    expect(isSubtypeInCategory("env_option_1", "environmental")).toBe(true);
+    expect(isSubtypeInCategory("env_option_1", "inspection")).toBe(false);
+    expect(isSubtypeInCategory("", "inspection")).toBe(false);
+  });
+
+  it("every category's first subtype resolves to a real spec", () => {
+    // This is exactly what the category dropdown does when it switches.
+    for (const category of ["inspection", "environmental"] as const) {
+      const first = SUBTYPES_BY_CATEGORY[category][0]!;
+      expect(() => createTaskDefaults(first)).not.toThrow();
+      expect(getTaskFormSpec(first).subtype).toBe(first);
+    }
+  });
+
+  it("names the culprit instead of throwing a bare TypeError", () => {
+    expect(() => getTaskFormSpec("" as TaskSubtype)).toThrow(/Unknown inspection task subtype/);
+    expect(() => createTaskDefaults("nope" as TaskSubtype)).toThrow(
+      /Unknown inspection task subtype/,
+    );
   });
 });
 
