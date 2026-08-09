@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "Pioneers-EGY",
+    "slug": "pioneers-egy",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "pioneersegy",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pioneersegy.inspections",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Pioneers-EGY uses the camera to photograph inspection findings and to scan certificate QR codes.",
+        "NSPhotoLibraryUsageDescription": "Pioneers-EGY needs access to your photos so you can attach existing site images to an inspection task."
+      }
+    },
+    "android": {
+      "package": "com.pioneersegy.inspections",
+      "adaptiveIcon": {
+        "backgroundColor": "#1D3A63",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "permissions": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO"],
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#1D3A63",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 96
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Pioneers-EGY uses the camera to photograph inspection findings and scan certificate QR codes."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Pioneers-EGY needs access to your photos so you can attach existing site images to an inspection task."
+        }
+      ],
+      "expo-background-task"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

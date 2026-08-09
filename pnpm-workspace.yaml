@@ -1,0 +1,11 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+# Native postinstall builds we explicitly trust.
+allowBuilds:
+  # Native resolver used by eslint-import-resolver; needs its binding compiled.
+  unrs-resolver: true
+  # Next.js SWC binaries.
+  "@tailwindcss/oxide": true
+  sharp: true
+  esbuild: true

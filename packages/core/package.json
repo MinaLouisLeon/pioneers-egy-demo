@@ -1,0 +1,30 @@
+{
+  "name": "@pioneers/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./roles": "./src/roles.ts",
+    "./forms": "./src/forms/index.ts",
+    "./schemas": "./src/schemas/index.ts",
+    "./files": "./src/files.ts",
+    "./format": "./src/format.ts",
+    "./ids": "./src/ids.ts"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@pioneers/config": "workspace:*",
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
+  }
+}

@@ -1,0 +1,11 @@
+/*
+ * The design tokens, Tailwind import and @source globs all live in the shared
+ * UI package so the web app and any future web surface stay visually identical.
+ * Only app-specific font wiring belongs here.
+ */
+@import "@pioneers/ui/globals.css";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}

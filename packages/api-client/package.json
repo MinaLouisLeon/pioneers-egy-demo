@@ -1,0 +1,22 @@
+{
+  "name": "@pioneers/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pioneers/core": "workspace:*",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@pioneers/config": "workspace:*",
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.3"
+  }
+}

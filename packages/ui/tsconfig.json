@@ -1,0 +1,13 @@
+{
+  "extends": "@pioneers/config/tsconfig/library.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "declaration": false,
+    "declarationMap": false,
+    "paths": {
+      "@pioneers/ui/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules"]
+}
