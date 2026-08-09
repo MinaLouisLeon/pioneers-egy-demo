@@ -9,8 +9,8 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Pioneers-EGY Inspection Management",
-    short_name: "Pioneers-EGY",
+    name: "Pioneers Integrated Engineering Services",
+    short_name: "Pioneers",
     description:
       "Record inspection jobs on site and manage the certificate register for Pioneers-EGY.",
     id: "/dashboard",
@@ -18,8 +18,8 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     orientation: "any",
-    background_color: "#f7f8fa",
-    theme_color: "#1d3a63",
+    background_color: "#ffffff",
+    theme_color: "#7a1f23",
     categories: ["business", "productivity", "utilities"],
     lang: "en",
     dir: "ltr",

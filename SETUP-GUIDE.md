@@ -629,6 +629,15 @@ check `apps/web/lib/upload.ts` passes back the `contentType` the API returned.
 `.env` is not being read, or Vercel is missing the variable. Restart `pnpm dev`
 after editing `.env`; on Vercel you must **redeploy** after changing variables.
 
+**Every page 500s with "Your project's URL and Key are required to create a
+Supabase client"**
+The root `.env` is not reaching the process. Next only reads `.env` from
+`apps/web`, so the `dev`/`build`/`start` scripts load the monorepo-root file
+with `dotenv-cli` first. Run the app through those scripts — `pnpm dev`,
+`pnpm dev:web`, or `pnpm --filter @pioneers/web dev` — rather than invoking
+`next dev` directly, which bypasses them. The same applies to the mobile app's
+`expo start`.
+
 **Invite emails never arrive**
 Supabase's built-in SMTP is rate-limited to a handful of emails per hour and
 often lands in spam. For production, set a real provider under

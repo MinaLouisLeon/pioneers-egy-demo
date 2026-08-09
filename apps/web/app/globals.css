@@ -1,11 +1,8 @@
 /*
  * The design tokens, Tailwind import and @source globs all live in the shared
  * UI package so the web app and any future web surface stay visually identical.
- * Only app-specific font wiring belongs here.
+ *
+ * The font families are declared there too (bound to the CSS variables that
+ * app/layout.tsx sets via next/font), so nothing app-specific is needed here.
  */
 @import "@pioneers/ui/globals.css";
-
-@theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}

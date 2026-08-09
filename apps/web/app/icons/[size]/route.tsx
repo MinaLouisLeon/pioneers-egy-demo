@@ -35,7 +35,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ siz
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#1d3a63",
+        background: "#7a1f23",
       }}
     >
       <svg
@@ -46,17 +46,15 @@ export async function GET(_request: Request, { params }: { params: Promise<{ siz
         xmlns="http://www.w3.org/2000/svg"
       >
         <path
-          d="M16 2.5 4.5 7v9.2c0 6.4 4.7 11.4 11.5 13.3 6.8-1.9 11.5-6.9 11.5-13.3V7L16 2.5Z"
-          fill="rgba(255,255,255,0.14)"
-          stroke="#ffffff"
-          strokeWidth="1.9"
-          strokeLinejoin="round"
+          d="M16 2.2 4.2 6.9v9.4c0 6.6 4.8 11.7 11.8 13.6 7-1.9 11.8-7 11.8-13.6V6.9L16 2.2Z"
+          fill="#1d3b5d"
         />
-        <circle cx="16" cy="15" r="4.6" stroke="#ffffff" strokeWidth="1.9" />
+        <circle cx="16" cy="15.6" r="4.3" stroke="#ffffff" strokeWidth="1.7" />
+        <circle cx="16" cy="15.6" r="1.3" fill="#f97415" />
         <path
-          d="M16 7.6v2.4M16 20v2.4M8.6 15H11m10 0h2.4"
+          d="M16 8.6v2.4M16 20.2v2.4M9 15.6h2.4m9.2 0H23"
           stroke="#ffffff"
-          strokeWidth="1.9"
+          strokeWidth="1.7"
           strokeLinecap="round"
         />
       </svg>

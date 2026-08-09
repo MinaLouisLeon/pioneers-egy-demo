@@ -12,114 +12,150 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ==========================================================================
-   Pioneers-EGY palette
-   Industrial blue with a teal accent — reads as engineering/inspection rather
-   than generic SaaS, and keeps enough chroma headroom for the status colours
-   (pass/fail/expiring) to stand out against it.
+   Pioneers-EGY brand palette
+   Taken from the corporate site (pioneers-egy.com), which uses the same
+   token names — so these values are the company's actual brand colours
+   rather than an approximation:
+
+     maroon  #7A1F23  hsl(357 60% 30%)   primary — buttons, links, active nav
+     navy    #1D3B5D  hsl(212 52% 24%)   secondary — headers, dark panels
+     orange  #F97415  hsl(25 95% 53%)    highlight — stats, accents, emphasis
+     ink     #1F2937  hsl(215 28% 17%)   body text
+
+   NOTE on --accent: shadcn/ui uses `accent` for *hover* backgrounds (menu
+   items, list rows), so it must stay quiet. The brand orange lives in
+   --highlight instead, used deliberately rather than on every hover.
    ========================================================================== */
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.5rem;
 
-  --background: oklch(0.985 0.002 250);
-  --foreground: oklch(0.21 0.02 255);
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(215 28% 17%);
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.02 255);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(215 28% 17%);
 
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.02 255);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(215 28% 17%);
 
-  --primary: oklch(0.48 0.13 249);
-  --primary-foreground: oklch(0.985 0.005 250);
+  --primary: hsl(357 60% 30%);
+  --primary-foreground: hsl(0 0% 100%);
 
-  --secondary: oklch(0.955 0.008 250);
-  --secondary-foreground: oklch(0.32 0.04 253);
+  --secondary: hsl(212 52% 24%);
+  --secondary-foreground: hsl(0 0% 100%);
 
-  --muted: oklch(0.955 0.008 250);
-  --muted-foreground: oklch(0.53 0.02 255);
+  --muted: hsl(210 20% 96%);
+  --muted-foreground: hsl(215 16% 47%);
 
-  --accent: oklch(0.93 0.03 210);
-  --accent-foreground: oklch(0.3 0.06 245);
+  /* Quiet hover surface — see note above. */
+  --accent: hsl(210 20% 94%);
+  --accent-foreground: hsl(215 28% 17%);
 
-  --destructive: oklch(0.58 0.21 27);
-  --destructive-foreground: oklch(0.985 0.005 250);
+  /* The brand orange, used on purpose. */
+  --highlight: hsl(25 95% 53%);
+  --highlight-foreground: hsl(0 0% 100%);
 
-  --success: oklch(0.6 0.14 155);
-  --success-foreground: oklch(0.985 0.005 250);
+  --destructive: hsl(0 84% 60%);
+  --destructive-foreground: hsl(0 0% 100%);
 
-  --warning: oklch(0.75 0.15 75);
-  --warning-foreground: oklch(0.25 0.05 75);
+  --success: hsl(152 60% 33%);
+  --success-foreground: hsl(0 0% 100%);
 
-  --border: oklch(0.9 0.01 252);
-  --input: oklch(0.9 0.01 252);
-  --ring: oklch(0.48 0.13 249);
+  --warning: hsl(32 90% 44%);
+  --warning-foreground: hsl(0 0% 100%);
 
-  --chart-1: oklch(0.48 0.13 249);
-  --chart-2: oklch(0.6 0.12 195);
-  --chart-3: oklch(0.6 0.14 155);
-  --chart-4: oklch(0.75 0.15 75);
-  --chart-5: oklch(0.58 0.21 27);
+  --border: hsl(214 32% 91%);
+  --input: hsl(214 32% 91%);
+  --ring: hsl(357 60% 30%);
 
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.21 0.02 255);
-  --sidebar-primary: oklch(0.48 0.13 249);
-  --sidebar-primary-foreground: oklch(0.985 0.005 250);
-  --sidebar-accent: oklch(0.955 0.008 250);
-  --sidebar-accent-foreground: oklch(0.32 0.04 253);
-  --sidebar-border: oklch(0.9 0.01 252);
-  --sidebar-ring: oklch(0.48 0.13 249);
+  /* Extended brand ramp, mirroring the corporate site's custom properties. */
+  --navy-dark: hsl(212 52% 15%);
+  --maroon-dark: hsl(357 60% 20%);
+  --maroon-light: hsl(357 40% 50%);
+  --steel: hsl(218 14% 45%);
+  --steel-light: hsl(218 14% 75%);
+
+  --gradient-hero: linear-gradient(135deg, hsl(212 52% 24%) 0%, hsl(212 52% 15%) 100%);
+  --gradient-maroon: linear-gradient(135deg, hsl(357 60% 30%) 0%, hsl(357 60% 20%) 100%);
+
+  --chart-1: hsl(357 60% 30%);
+  --chart-2: hsl(212 52% 24%);
+  --chart-3: hsl(25 95% 53%);
+  --chart-4: hsl(152 60% 33%);
+  --chart-5: hsl(218 14% 45%);
+
+  --sidebar: hsl(0 0% 100%);
+  --sidebar-foreground: hsl(215 28% 17%);
+  --sidebar-primary: hsl(357 60% 30%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(210 20% 94%);
+  --sidebar-accent-foreground: hsl(357 60% 30%);
+  --sidebar-border: hsl(214 32% 91%);
+  --sidebar-ring: hsl(357 60% 30%);
 }
 
 .dark {
-  --background: oklch(0.19 0.02 258);
-  --foreground: oklch(0.96 0.005 250);
+  --background: hsl(222 47% 11%);
+  --foreground: hsl(210 40% 98%);
 
-  --card: oklch(0.235 0.022 258);
-  --card-foreground: oklch(0.96 0.005 250);
+  --card: hsl(222 44% 14%);
+  --card-foreground: hsl(210 40% 98%);
 
-  --popover: oklch(0.235 0.022 258);
-  --popover-foreground: oklch(0.96 0.005 250);
+  --popover: hsl(222 44% 14%);
+  --popover-foreground: hsl(210 40% 98%);
 
-  --primary: oklch(0.7 0.12 245);
-  --primary-foreground: oklch(0.19 0.03 258);
+  --primary: hsl(357 60% 46%);
+  --primary-foreground: hsl(0 0% 100%);
 
-  --secondary: oklch(0.29 0.025 258);
-  --secondary-foreground: oklch(0.96 0.005 250);
+  --secondary: hsl(212 52% 34%);
+  --secondary-foreground: hsl(0 0% 100%);
 
-  --muted: oklch(0.29 0.025 258);
-  --muted-foreground: oklch(0.7 0.018 255);
+  --muted: hsl(217 33% 17%);
+  --muted-foreground: hsl(215 20% 65%);
 
-  --accent: oklch(0.33 0.04 240);
-  --accent-foreground: oklch(0.96 0.005 250);
+  --accent: hsl(217 33% 20%);
+  --accent-foreground: hsl(210 40% 98%);
 
-  --destructive: oklch(0.66 0.19 25);
-  --destructive-foreground: oklch(0.98 0.005 250);
+  --highlight: hsl(25 95% 55%);
+  --highlight-foreground: hsl(222 47% 11%);
 
-  --success: oklch(0.68 0.14 155);
-  --success-foreground: oklch(0.19 0.03 258);
+  --destructive: hsl(0 70% 50%);
+  --destructive-foreground: hsl(0 0% 100%);
 
-  --warning: oklch(0.8 0.14 78);
-  --warning-foreground: oklch(0.22 0.04 78);
+  --success: hsl(152 52% 45%);
+  --success-foreground: hsl(222 47% 11%);
 
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.65 0.1 245);
+  --warning: hsl(32 85% 55%);
+  --warning-foreground: hsl(222 47% 11%);
 
-  --chart-1: oklch(0.7 0.12 245);
-  --chart-2: oklch(0.7 0.11 195);
-  --chart-3: oklch(0.68 0.14 155);
-  --chart-4: oklch(0.8 0.14 78);
-  --chart-5: oklch(0.66 0.19 25);
+  --border: hsl(217 33% 22%);
+  --input: hsl(217 33% 24%);
+  --ring: hsl(357 60% 50%);
 
-  --sidebar: oklch(0.235 0.022 258);
-  --sidebar-foreground: oklch(0.96 0.005 250);
-  --sidebar-primary: oklch(0.7 0.12 245);
-  --sidebar-primary-foreground: oklch(0.19 0.03 258);
-  --sidebar-accent: oklch(0.29 0.025 258);
-  --sidebar-accent-foreground: oklch(0.96 0.005 250);
-  --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.65 0.1 245);
+  --navy-dark: hsl(212 52% 10%);
+  --maroon-dark: hsl(357 60% 24%);
+  --maroon-light: hsl(357 45% 58%);
+  --steel: hsl(218 14% 60%);
+  --steel-light: hsl(218 14% 40%);
+
+  --gradient-hero: linear-gradient(135deg, hsl(212 52% 20%) 0%, hsl(212 52% 10%) 100%);
+  --gradient-maroon: linear-gradient(135deg, hsl(357 60% 34%) 0%, hsl(357 60% 20%) 100%);
+
+  --chart-1: hsl(357 60% 52%);
+  --chart-2: hsl(212 52% 55%);
+  --chart-3: hsl(25 95% 55%);
+  --chart-4: hsl(152 52% 45%);
+  --chart-5: hsl(218 14% 60%);
+
+  --sidebar: hsl(222 44% 13%);
+  --sidebar-foreground: hsl(210 40% 98%);
+  --sidebar-primary: hsl(357 60% 52%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(217 33% 20%);
+  --sidebar-accent-foreground: hsl(210 40% 98%);
+  --sidebar-border: hsl(217 33% 22%);
+  --sidebar-ring: hsl(357 60% 50%);
 }
 
 @theme inline {
@@ -142,6 +178,8 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
@@ -151,6 +189,12 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
+  --color-navy-dark: var(--navy-dark);
+  --color-maroon-dark: var(--maroon-dark);
+  --color-maroon-light: var(--maroon-light);
+  --color-steel: var(--steel);
+  --color-steel-light: var(--steel-light);
 
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -166,6 +210,10 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Montserrat body / Playfair Display headings — the corporate site's pairing. */
+  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-playfair), Georgia, "Times New Roman", serif;
 }
 
 @layer base {
@@ -175,8 +223,22 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+  }
+
+  /*
+   * Headings are set in Playfair Display, matching pioneers-egy.com. Applied
+   * globally so every page title picks it up without a per-component class.
+   * Small UI labels that happen to use an h-tag opt out with `font-sans`.
+   */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    letter-spacing: -0.01em;
   }
 
   /* Keep long project/company names from blowing out narrow table cells. */
@@ -192,6 +254,18 @@
   }
   .pt-safe {
     padding-top: env(safe-area-inset-top);
+  }
+
+  .bg-gradient-hero {
+    background-image: var(--gradient-hero);
+  }
+  .bg-gradient-maroon {
+    background-image: var(--gradient-maroon);
+  }
+
+  /* The site's signature treatment: an orange word inside a dark heading. */
+  .text-highlight {
+    color: var(--highlight);
   }
 }
 

@@ -19,7 +19,7 @@
     "android": {
       "package": "com.pioneersegy.inspections",
       "adaptiveIcon": {
-        "backgroundColor": "#1D3A63",
+        "backgroundColor": "#7A1F23",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
@@ -36,7 +36,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#1D3A63",
+          "backgroundColor": "#7A1F23",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 96
         }

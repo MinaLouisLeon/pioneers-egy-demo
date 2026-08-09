@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@pioneers/ui/lib/utils";
 
-import { isActiveNavItem, type NavItem } from "@/lib/navigation";
+import { NAV_ICONS, isActiveNavItem, type NavItem } from "@/lib/navigation";
 
 export function SidebarNav({
   items,
@@ -21,7 +21,8 @@ export function SidebarNav({
     <nav className="flex flex-col gap-1" aria-label="Main">
       {items.map((item) => {
         const active = isActiveNavItem(pathname, item.href);
-        const Icon = item.icon;
+        // Resolved here rather than passed in — see NAV_ICONS.
+        const Icon = NAV_ICONS[item.icon];
 
         return (
           <Link

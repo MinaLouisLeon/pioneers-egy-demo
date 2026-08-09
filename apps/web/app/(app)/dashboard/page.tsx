@@ -20,7 +20,7 @@ import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { JobStatusBadge } from "@/components/status-badge";
 import { requireUser } from "@/lib/auth";
-import { navItemsForRole } from "@/lib/navigation";
+import { NAV_ICONS, navItemsForRole } from "@/lib/navigation";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -85,7 +85,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {sections.map((section) => {
-          const Icon = section.icon;
+          const Icon = NAV_ICONS[section.icon];
           return (
             <Card key={section.href} className="hover:border-primary/40 group transition-colors">
               <CardHeader>
