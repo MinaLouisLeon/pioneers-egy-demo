@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import { buildCertificateKey } from "@pioneers/core/files";
 import { certificateMetadataSchema } from "@pioneers/core/schemas";
+import { canEditCertificate } from "@pioneers/core/roles";
+import { createSupabaseAdminClient } from "@pioneers/supabase/admin";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/auth";
@@ -114,26 +116,42 @@ export async function updateCertificate(
  * Order matters: the row goes first so the file stops being reachable even if
  * the R2 call fails. A leftover object is a storage-cost problem; a reachable
  * file for a "deleted" certificate is a disclosure problem.
+ *
+ * As with deleteJob, the update itself runs with the service role because
+ * `certificates_select` hides soft-deleted rows and PostgREST's
+ * UPDATE ... RETURNING applies SELECT policies to the result — so the row
+ * disappears mid-statement and RLS rejects it. Permission is enforced here
+ * instead: the caller must be the uploader or an administrator, checked
+ * against a row they can already see through their own client.
  */
 export async function deleteCertificate(certificateId: string): Promise<ActionResult> {
-  await requireUser();
+  const profile = await requireUser();
 
   const supabase = await getSupabaseServerClient();
-
   const { data: certificate } = await supabase
     .from("certificates")
-    .select("r2_key")
+    .select("id, r2_key, uploaded_by")
     .eq("id", certificateId)
+    .is("deleted_at", null)
     .maybeSingle();
 
-  const { error } = await supabase
+  if (!certificate) return { ok: false, error: "That certificate no longer exists." };
+
+  if (!canEditCertificate(profile.role, profile.id, certificate)) {
+    return { ok: false, error: "You can only delete certificates you uploaded." };
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { error, count } = await admin
     .from("certificates")
-    .update({ deleted_at: new Date().toISOString() })
-    .eq("id", certificateId);
+    .update({ deleted_at: new Date().toISOString() }, { count: "exact" })
+    .eq("id", certificateId)
+    .is("deleted_at", null);
 
   if (error) return { ok: false, error: error.message };
+  if (!count) return { ok: false, error: "That certificate has already been deleted." };
 
-  if (certificate?.r2_key) {
+  if (certificate.r2_key) {
     await deleteObject(certificate.r2_key).catch(() => {
       /* orphaned object; the row is already unreachable */
     });
@@ -143,12 +161,31 @@ export async function deleteCertificate(certificateId: string): Promise<ActionRe
   return { ok: true, data: undefined };
 }
 
-/** Hard-delete used to roll back a row whose upload failed. */
+/**
+ * Hard-delete used to roll back a row whose upload failed.
+ *
+ * Also service-role: `certificates_delete` is admin-only, so an inspector whose
+ * upload failed could not clean up after themselves and would be left with a
+ * certificate pointing at a file that was never stored.
+ */
 export async function discardFailedCertificate(certificateId: string): Promise<ActionResult> {
-  await requireUser();
+  const profile = await requireUser();
 
   const supabase = await getSupabaseServerClient();
-  const { error } = await supabase.from("certificates").delete().eq("id", certificateId);
+  const { data: certificate } = await supabase
+    .from("certificates")
+    .select("id, uploaded_by")
+    .eq("id", certificateId)
+    .maybeSingle();
+
+  if (!certificate) return { ok: true, data: undefined }; // nothing to roll back
+
+  if (!canEditCertificate(profile.role, profile.id, certificate)) {
+    return { ok: false, error: "You can only discard your own uploads." };
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.from("certificates").delete().eq("id", certificateId);
 
   if (error) return { ok: false, error: error.message };
 

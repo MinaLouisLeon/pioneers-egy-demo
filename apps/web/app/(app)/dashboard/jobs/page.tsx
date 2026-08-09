@@ -17,6 +17,7 @@ import {
 } from "@pioneers/ui/components/table";
 
 import { EmptyState } from "@/components/empty-state";
+import { FlashToast } from "@/components/flash-toast";
 import { JobFilters } from "@/components/jobs/job-filters";
 import { PageHeader } from "@/components/page-header";
 import { JobStatusBadge } from "@/components/status-badge";
@@ -55,6 +56,12 @@ export default async function JobsPage({ searchParams }: PageProps<"/dashboard/j
             </Button>
           ) : null
         }
+      />
+
+      <FlashToast
+        when={query.deleted === "1"}
+        message="Job deleted"
+        description="It no longer appears anywhere in the app."
       />
 
       <div className="flex flex-col gap-4">

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import {
   categoryForSubtype,
@@ -9,6 +10,8 @@ import {
   TASK_SUBTYPES,
   type TaskSubtype,
 } from "@pioneers/core/schemas";
+import { can } from "@pioneers/core/roles";
+import { createSupabaseAdminClient } from "@pioneers/supabase/admin";
 import { z } from "zod";
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
@@ -34,6 +37,15 @@ import { requireUser } from "@/lib/auth";
 
 export type ActionResult<T = void> =
   { ok: true; data: T } | { ok: false; error: string; fieldErrors?: Record<string, string[]> };
+
+/**
+ * Return type for an action that ends in `redirect()` on success.
+ *
+ * `redirect` throws, so such an action only ever *returns* when it refused —
+ * saying so in the type saves the caller narrowing a success case that cannot
+ * happen.
+ */
+export type DeleteRejected = { ok: false; error: string };
 
 // ---------------------------------------------------------------------------
 // Step 1 — job details
@@ -303,18 +315,53 @@ export async function reopenJob(jobId: string): Promise<ActionResult> {
   return { ok: true, data: undefined };
 }
 
-/** Soft delete so certificates that reference the job keep their link. */
-export async function deleteJob(jobId: string): Promise<ActionResult> {
-  await requireUser();
+/**
+ * Soft delete, so certificates that reference the job keep their link.
+ *
+ * The update runs with the service role, which is not the shortcut it looks
+ * like. `jobs_select` only exposes rows where `deleted_at is null`, and
+ * PostgREST issues its UPDATE with a RETURNING clause — Postgres applies SELECT
+ * policies to returned rows, so the instant the row is soft-deleted it becomes
+ * invisible and the whole statement fails with "new row violates row-level
+ * security policy". A soft delete is therefore impossible through RLS with this
+ * policy shape, whoever is asking.
+ *
+ * Permission is enforced here instead, in two steps: the caller must hold the
+ * `jobs.delete` permission (administrators only, matching the `jobs_delete`
+ * policy), and the job must be visible to them through their *own* RLS-scoped
+ * client before anything is escalated.
+ */
+export async function deleteJob(jobId: string): Promise<DeleteRejected> {
+  const profile = await requireUser();
+
+  if (!can(profile.role, "jobs.delete")) {
+    return { ok: false, error: "Only administrators can delete a job." };
+  }
 
   const supabase = await getSupabaseServerClient();
-  const { error } = await supabase
+  const { data: visible } = await supabase
     .from("jobs")
-    .update({ deleted_at: new Date().toISOString() })
-    .eq("id", jobId);
+    .select("id")
+    .eq("id", jobId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (!visible) return { ok: false, error: "That job no longer exists." };
+
+  const admin = createSupabaseAdminClient();
+  const { error, count } = await admin
+    .from("jobs")
+    .update({ deleted_at: new Date().toISOString() }, { count: "exact" })
+    .eq("id", jobId)
+    .is("deleted_at", null);
 
   if (error) return { ok: false, error: error.message };
+  if (!count) return { ok: false, error: "That job has already been deleted." };
 
   revalidatePath("/dashboard/jobs");
-  return { ok: true, data: undefined };
+
+  // Redirect from the server rather than the client: the page we are on renders
+  // this job, and re-rendering it after the delete would 404 mid-transition and
+  // leave the confirmation dialog stuck open over a dead page.
+  redirect("/dashboard/jobs?deleted=1");
 }

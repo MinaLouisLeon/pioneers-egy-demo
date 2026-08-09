@@ -14,6 +14,23 @@
 -- Doing that inside a profiles policy would recurse infinitely, so role lookups
 -- go through SECURITY DEFINER helpers that bypass RLS. They are STABLE so
 -- Postgres evaluates them once per statement rather than once per row.
+--
+-- ---------------------------------------------------------------------------
+-- IMPORTANT: soft deletes cannot go through these policies
+-- ---------------------------------------------------------------------------
+-- `jobs` and `certificates` are soft-deleted by setting `deleted_at`, and their
+-- SELECT policies below only expose rows where `deleted_at is null`.
+--
+-- PostgREST issues its UPDATE with a RETURNING clause, and Postgres applies
+-- SELECT policies to returned rows. The instant `deleted_at` is set the row
+-- stops satisfying the SELECT policy, so the statement fails with
+-- "new row violates row-level security policy" — for the owner and for an
+-- administrator alike. There is no combination of roles that makes it work.
+--
+-- Soft deletes are therefore performed with the service role in the relevant
+-- server action (see deleteJob / deleteCertificate), which checks permission in
+-- application code first. If you add another soft-deletable table, it needs the
+-- same treatment — do not expect an ordinary UPDATE to work.
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------

@@ -54,17 +54,18 @@ export function JobActions({
     router.refresh();
   }
 
+  /**
+   * On success the server action redirects to the jobs list, so nothing after
+   * the await runs — the page navigates and this dialog unmounts with it.
+   * Reaching the lines below therefore means the delete was refused.
+   */
   async function handleDelete() {
     setIsWorking(true);
     const result = await deleteJob(jobId);
-    setIsWorking(false);
 
-    if (!result.ok) {
-      toast.error("Could not delete the job", { description: result.error });
-      return;
-    }
-    toast.success("Job deleted");
-    router.push("/dashboard/jobs");
+    setIsWorking(false);
+    setConfirmDelete(false);
+    toast.error("Could not delete the job", { description: result.error });
   }
 
   const canDelete = can(role, "jobs.delete");
