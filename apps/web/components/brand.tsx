@@ -1,32 +1,55 @@
+import Image from "next/image";
+
 import { cn } from "@pioneers/ui/lib/utils";
 
 /**
- * Wordmark, matching the corporate identity at pioneers-egy.com.
+ * Brand assets, taken from the corporate site at pioneers-egy.com.
  *
- * The glyph is drawn inline rather than loaded as an image so it inherits the
- * theme colours, stays crisp at any size, and costs no network request. Maroon
- * shield with a navy inspection crosshair — the two brand colours in one mark.
+ * `public/brand/logo-full.png` is the company logo exactly as published (PIS
+ * emblem, divider, "PIONEERS / Integrated Engineering Services").
+ * `public/brand/emblem.png` is the emblem cropped out of it.
+ *
+ * The published logo has a transparent background and a navy wordmark, so it
+ * disappears against the dark theme. The app shell therefore pairs the emblem —
+ * a solid maroon tile that reads on any background — with live text, and the
+ * full logo is used only on surfaces that are always light.
+ *
+ * `unoptimized` keeps these off the image optimiser: they are already small,
+ * and optimising PNGs in production would pull in `sharp` for no benefit.
  */
+
+const EMBLEM = { src: "/brand/emblem.png", width: 178, height: 154 };
+const LOGO_FULL = { src: "/brand/logo-full.png", width: 563, height: 155 };
+
 export function BrandMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 32 32" fill="none" aria-hidden="true" className={cn("size-9", className)}>
-      <path
-        d="M16 2.2 4.2 6.9v9.4c0 6.6 4.8 11.7 11.8 13.6 7-1.9 11.8-7 11.8-13.6V6.9L16 2.2Z"
-        className="fill-primary"
-      />
-      <path
-        d="M16 5.1 6.9 8.7v7.6c0 5.2 3.7 9.3 9.1 10.9 5.4-1.6 9.1-5.7 9.1-10.9V8.7L16 5.1Z"
-        className="fill-secondary"
-      />
-      <circle cx="16" cy="15.6" r="4.3" className="stroke-white" strokeWidth="1.7" fill="none" />
-      <circle cx="16" cy="15.6" r="1.3" className="fill-highlight" />
-      <path
-        d="M16 8.6v2.4M16 20.2v2.4M9 15.6h2.4m9.2 0H23"
-        className="stroke-white"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-      />
-    </svg>
+    <Image
+      src={EMBLEM.src}
+      alt=""
+      width={EMBLEM.width}
+      height={EMBLEM.height}
+      priority
+      unoptimized
+      aria-hidden
+      className={cn("h-9 w-auto rounded-[3px]", className)}
+    />
+  );
+}
+
+/**
+ * The published logo, unmodified. Only for light backgrounds — see above.
+ */
+export function BrandLogoFull({ className }: { className?: string }) {
+  return (
+    <Image
+      src={LOGO_FULL.src}
+      alt="Pioneers-EGY — Integrated Engineering Services"
+      width={LOGO_FULL.width}
+      height={LOGO_FULL.height}
+      priority
+      unoptimized
+      className={cn("h-10 w-auto", className)}
+    />
   );
 }
 
@@ -45,18 +68,21 @@ export function BrandLockup({
       <BrandMark />
       <div className="leading-none">
         <div
-          className={cn("font-serif text-lg font-bold tracking-tight", inverted && "text-white")}
+          className={cn(
+            "text-[15px] font-bold tracking-tight",
+            inverted ? "text-white" : "text-secondary dark:text-foreground",
+          )}
         >
-          PIONEERS
+          PIONEERS-EGY
         </div>
         {showTagline ? (
           <div
             className={cn(
-              "mt-1 text-[10px] font-medium uppercase tracking-[0.14em]",
+              "mt-1 font-serif text-[10px] tracking-wide",
               inverted ? "text-white/70" : "text-muted-foreground",
             )}
           >
-            Integrated Engineering
+            Integrated Engineering Services
           </div>
         ) : null}
       </div>

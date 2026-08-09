@@ -9,8 +9,8 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Pioneers Integrated Engineering Services",
-    short_name: "Pioneers",
+    name: "Pioneers-EGY — Integrated Engineering Services",
+    short_name: "Pioneers-EGY",
     description:
       "Record inspection jobs on site and manage the certificate register for Pioneers-EGY.",
     id: "/dashboard",

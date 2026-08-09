@@ -9,7 +9,7 @@ import { Button } from "@pioneers/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@pioneers/ui/components/card";
 import { Separator } from "@pioneers/ui/components/separator";
 
-import { BrandLockup } from "@/components/brand";
+import { BrandLogoFull } from "@/components/brand";
 import { CertificateStatusBadge } from "@/components/status-badge";
 import { resolveShareToken } from "@/lib/verify";
 
@@ -33,8 +33,16 @@ export default async function VerifyPage({ params }: PageProps<"/verify/[token]"
 
   return (
     <div className="flex min-h-svh flex-col">
+      {/*
+        The published company logo, unmodified — this page is shown to clients
+        outside the company, so it should carry the real mark. Its wordmark is
+        navy on transparent, so it sits on a white plate that keeps it legible
+        if the visitor's device is in dark mode.
+      */}
       <header className="flex items-center justify-center border-b px-4 py-4">
-        <BrandLockup showTagline />
+        <div className="rounded-md bg-white px-4 py-2">
+          <BrandLogoFull />
+        </div>
       </header>
 
       <main className="flex flex-1 items-start justify-center px-4 py-10 sm:py-16">

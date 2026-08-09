@@ -1,14 +1,22 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
 import { ImageResponse } from "next/og";
 
 /**
- * PWA icons, generated at request time rather than committed as binaries.
+ * PWA icons, generated from the company emblem in public/brand/emblem.png.
  *
- * Keeps the repository free of image assets that would drift from the brand
- * mark in components/brand.tsx, and lets any size be produced on demand.
- * Cached hard because the output only changes when this file does.
+ * Generated rather than committed as fixed-size binaries so the icon can never
+ * drift from the brand asset, and any size can be produced on demand. The
+ * emblem is inlined as a data URI because the renderer has no network access.
+ *
+ * Cached hard: the output only changes when the emblem or this file does.
  */
 
 const ALLOWED_SIZES = [192, 512] as const;
+
+/** The emblem's own maroon, so the padding around it is invisible. */
+const BRAND_MAROON = "#7a1f23";
 
 export function generateStaticParams() {
   return ALLOWED_SIZES.map((size) => ({ size: String(size) }));
@@ -22,10 +30,15 @@ export async function GET(_request: Request, { params }: { params: Promise<{ siz
     return new Response("Not found", { status: 404 });
   }
 
-  // Maskable icons must keep their content inside a safe circle of ~80% of the
-  // canvas, or Android will crop the mark when it applies a shape mask.
-  const inset = size * 0.2;
-  const glyph = size - inset * 2;
+  const emblem = await readFile(path.join(process.cwd(), "public", "brand", "emblem.png"));
+  const emblemDataUri = `data:image/png;base64,${emblem.toString("base64")}`;
+
+  /*
+   * Maskable icons are cropped to a circle of roughly 80% of the canvas on
+   * Android, so the emblem is inset to stay inside that safe area. The
+   * surrounding fill is the emblem's own maroon, so the inset is invisible.
+   */
+  const inset = Math.round(size * 0.14);
 
   return new ImageResponse(
     <div
@@ -35,29 +48,17 @@ export async function GET(_request: Request, { params }: { params: Promise<{ siz
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#7a1f23",
+        background: BRAND_MAROON,
       }}
     >
-      <svg
-        width={glyph}
-        height={glyph}
-        viewBox="0 0 32 32"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M16 2.2 4.2 6.9v9.4c0 6.6 4.8 11.7 11.8 13.6 7-1.9 11.8-7 11.8-13.6V6.9L16 2.2Z"
-          fill="#1d3b5d"
-        />
-        <circle cx="16" cy="15.6" r="4.3" stroke="#ffffff" strokeWidth="1.7" />
-        <circle cx="16" cy="15.6" r="1.3" fill="#f97415" />
-        <path
-          d="M16 8.6v2.4M16 20.2v2.4M9 15.6h2.4m9.2 0H23"
-          stroke="#ffffff"
-          strokeWidth="1.7"
-          strokeLinecap="round"
-        />
-      </svg>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={emblemDataUri}
+        alt=""
+        width={size - inset * 2}
+        height={size - inset * 2}
+        style={{ objectFit: "contain" }}
+      />
     </div>,
     {
       width: size,

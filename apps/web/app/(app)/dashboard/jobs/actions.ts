@@ -125,9 +125,15 @@ const saveTaskSchema = z.object({
   subtype: z.enum(TASK_SUBTYPES),
   sortOrder: z.number().int().nonnegative(),
   data: z.unknown(),
-  photos: z.array(savePhotoSchema),
 });
 
+/**
+ * Create or update the task row itself.
+ *
+ * Photos are deliberately NOT touched here — they are their own step in the
+ * dialog and are persisted by `saveTaskPhotos`. Keeping them separate means
+ * editing a task's details later cannot disturb photos already attached to it.
+ */
 export async function saveTask(
   jobId: string,
   input: unknown,
@@ -178,17 +184,51 @@ export async function saveTask(
     taskId = data.id;
   }
 
-  // Photos are replaced wholesale: the uploader has already pushed the bytes to
-  // R2, so this just reconciles the rows that point at them. Deleting first
-  // keeps ordering and removals correct without diffing.
-  const { error: deleteError } = await supabase.from("task_photos").delete().eq("task_id", taskId);
+  revalidatePath(`/dashboard/jobs/${jobId}`);
+  return { ok: true, data: { taskId } };
+}
 
+/**
+ * Replace the photo rows attached to a task.
+ *
+ * Called from the dialog's photo step every time the set changes, rather than
+ * only when the dialog is closed. The bytes are already in R2 by then, so
+ * persisting immediately means an abandoned dialog cannot leave an uploaded
+ * photo with no row pointing at it.
+ *
+ * Replaced wholesale rather than diffed: the list is capped at a dozen, and
+ * this keeps ordering and removals correct for free.
+ */
+export async function saveTaskPhotos(
+  jobId: string,
+  taskId: string,
+  input: unknown,
+): Promise<ActionResult> {
+  await requireUser();
+
+  const parsed = z.array(savePhotoSchema).safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Those photos could not be saved." };
+
+  const supabase = await getSupabaseServerClient();
+
+  // Confirms the task belongs to this job before touching anything. RLS already
+  // restricts the rows themselves; this turns a silent no-op into a clear error.
+  const { data: task } = await supabase
+    .from("job_tasks")
+    .select("id")
+    .eq("id", taskId)
+    .eq("job_id", jobId)
+    .maybeSingle();
+
+  if (!task) return { ok: false, error: "That task does not belong to this job." };
+
+  const { error: deleteError } = await supabase.from("task_photos").delete().eq("task_id", taskId);
   if (deleteError) return { ok: false, error: deleteError.message };
 
-  if (task.photos.length > 0) {
-    const { error: photoError } = await supabase.from("task_photos").insert(
-      task.photos.map((photo, index) => ({
-        task_id: taskId!,
+  if (parsed.data.length > 0) {
+    const { error: insertError } = await supabase.from("task_photos").insert(
+      parsed.data.map((photo, index) => ({
+        task_id: taskId,
         client_id: photo.clientId,
         r2_key: photo.r2Key,
         file_name: photo.fileName,
@@ -198,11 +238,11 @@ export async function saveTask(
       })),
     );
 
-    if (photoError) return { ok: false, error: photoError.message };
+    if (insertError) return { ok: false, error: insertError.message };
   }
 
   revalidatePath(`/dashboard/jobs/${jobId}`);
-  return { ok: true, data: { taskId } };
+  return { ok: true, data: undefined };
 }
 
 export async function deleteTask(jobId: string, taskId: string): Promise<ActionResult> {

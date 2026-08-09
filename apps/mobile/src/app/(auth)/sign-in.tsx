@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { Image, KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -47,21 +47,23 @@ export default function SignInScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={{ gap: spacing.sm }}>
-          <View
+          {/*
+            The company's own PIS emblem, cropped from the logo published at
+            pioneers-egy.com. The full logo has a navy wordmark on a
+            transparent background, so it is unreadable in dark mode — the
+            emblem is a solid maroon tile that reads on either theme.
+          */}
+          <Image
+            source={require("../../../assets/images/emblem.png")}
             style={{
-              width: 52,
+              width: 60,
               height: 52,
-              borderRadius: radius.lg,
-              backgroundColor: theme.colors.primary,
-              alignItems: "center",
-              justifyContent: "center",
+              borderRadius: radius.sm,
               marginBottom: spacing.sm,
             }}
-          >
-            <Body style={{ color: theme.colors.primaryText, fontSize: 22, fontWeight: "700" }}>
-              P
-            </Body>
-          </View>
+            resizeMode="contain"
+            accessibilityIgnoresInvertColors
+          />
           <Title>Pioneers-EGY</Title>
           <Muted>
             Sign in with the account your administrator set up. Your work is saved on this device

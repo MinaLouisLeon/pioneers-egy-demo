@@ -8,6 +8,7 @@ import {
   ArrowRight,
   ClipboardList,
   ImageIcon,
+  ImagePlus,
   Pencil,
   Plus,
   Trash2,
@@ -25,6 +26,7 @@ import {
   TaskEditorDialog,
   newEditableTask,
   type EditableTask,
+  type TaskEditorStep,
 } from "@/components/jobs/task-editor";
 import { deleteTask } from "@/app/(app)/dashboard/jobs/actions";
 
@@ -45,14 +47,17 @@ export function TaskListEditor({
   const [tasks, setTasks] = useState(initialTasks);
   const [editing, setEditing] = useState<EditableTask | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogStep, setDialogStep] = useState<TaskEditorStep>("details");
 
   function openNew() {
     setEditing(newEditableTask(tasks.length));
+    setDialogStep("details");
     setDialogOpen(true);
   }
 
-  function openExisting(task: EditableTask) {
+  function openExisting(task: EditableTask, step: TaskEditorStep = "details") {
     setEditing(task);
+    setDialogStep(step);
     setDialogOpen(true);
   }
 
@@ -65,8 +70,11 @@ export function TaskListEditor({
       return next;
     });
 
-    // Keep the dialog's `task` prop pointing at the now-persisted row so the
-    // photo uploader unlocks without the user having to reopen it.
+    /*
+     * Keep the dialog's `task` prop pointing at the now-persisted row. Without
+     * this the photo step would still be looking at a task with a null id, and
+     * the uploader would have nothing to attach to.
+     */
     setEditing(saved);
     router.refresh();
   }
@@ -142,6 +150,16 @@ export function TaskListEditor({
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => openExisting(task, "photos")}
+                        aria-label={`Add photos to task ${index + 1}`}
+                        disabled={!task.taskId}
+                      >
+                        <ImagePlus />
+                        {task.photos.length > 0 ? "Photos" : "Add photos"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => openExisting(task)}
                         aria-label={`Edit task ${index + 1}`}
                       >
@@ -187,6 +205,7 @@ export function TaskListEditor({
         jobId={jobId}
         task={editing}
         open={dialogOpen}
+        initialStep={dialogStep}
         onOpenChange={setDialogOpen}
         onSaved={handleSaved}
       />

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ImagePlus, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 
 import {
@@ -36,10 +37,8 @@ import {
   Form,
   FormControl,
   FormDescription,
-  FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from "@pioneers/ui/components/form";
 import {
   Select,
@@ -49,10 +48,11 @@ import {
   SelectValue,
 } from "@pioneers/ui/components/select";
 import { Separator } from "@pioneers/ui/components/separator";
+import { cn } from "@pioneers/ui/lib/utils";
 
 import { DynamicField } from "@/components/forms/dynamic-field";
 import { PhotoUploader, type UploadedPhoto } from "@/components/jobs/photo-uploader";
-import { saveTask } from "@/app/(app)/dashboard/jobs/actions";
+import { saveTask, saveTaskPhotos } from "@/app/(app)/dashboard/jobs/actions";
 
 export type EditableTask = {
   taskId: string | null;
@@ -63,6 +63,9 @@ export type EditableTask = {
   data: Record<string, unknown>;
   photos: UploadedPhoto[];
 };
+
+/** Which pane of the dialog is showing. */
+export type TaskEditorStep = "details" | "photos";
 
 export function newEditableTask(sortOrder: number): EditableTask {
   return {
@@ -77,30 +80,50 @@ export function newEditableTask(sortOrder: number): EditableTask {
 }
 
 /**
- * Add/edit dialog for a single inspection task.
+ * Add/edit dialog for a single inspection task, in two steps.
  *
- * The two dropdowns cascade: choosing a category narrows the type list, and
- * choosing a type swaps in that subtype's schema and fields. Everything below
- * the dropdowns comes from TASK_FORM_SPECS — this component contains no
- * knowledge of what a lifting or NDT form looks like.
+ *   1. Details — the two cascading dropdowns and the subtype's fields.
+ *   2. Photos  — the uploader.
+ *
+ * They are separate because an R2 object key, and the server-side permission
+ * check that guards it, are both derived from the task id. Photos therefore
+ * cannot be uploaded until the task row exists. Rather than showing the user a
+ * disabled uploader and asking them to save first, step 1 creates the row and
+ * step 2 is simply the next thing they do.
+ *
+ * Everything under the dropdowns comes from TASK_FORM_SPECS — this component
+ * contains no knowledge of what a lifting or NDT form looks like.
  */
 export function TaskEditorDialog({
   jobId,
   task,
   open,
+  initialStep = "details",
   onOpenChange,
   onSaved,
 }: {
   jobId: string;
   task: EditableTask | null;
   open: boolean;
+  /** Pass "photos" to jump straight to the uploader for an existing task. */
+  initialStep?: TaskEditorStep;
   onOpenChange: (open: boolean) => void;
   onSaved: (task: EditableTask) => void;
 }) {
+  const [step, setStep] = useState<TaskEditorStep>(initialStep);
   const [category, setCategory] = useState<TaskCategory>(task?.category ?? "inspection");
   const [subtype, setSubtype] = useState<TaskSubtype>(task?.subtype ?? "lifting");
   const [photos, setPhotos] = useState<UploadedPhoto[]>(task?.photos ?? []);
+  const [savedTaskId, setSavedTaskId] = useState<string | null>(task?.taskId ?? null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [isSavingPhotos, setIsSavingPhotos] = useState(false);
+
+  /**
+   * Whether this dialog was opened to create a task, captured once when it
+   * opens. Derived state would flip to "edit" the moment step 1 saves, renaming
+   * the dialog under the user mid-flow.
+   */
+  const [isNew, setIsNew] = useState(!task?.taskId);
 
   const spec = TASK_FORM_SPECS[subtype];
 
@@ -113,16 +136,36 @@ export function TaskEditorDialog({
     defaultValues: { data: task?.data ?? createTaskDefaults(subtype) },
   });
 
-  // Reset whenever a different task is opened.
+  /**
+   * Load a task into the dialog — but only once per task.
+   *
+   * Saving step 1 calls `onSaved`, which hands a new `task` object back down as
+   * a prop. Re-running this effect on every such change would reset `step`
+   * straight back to "details" and strand the user on step 1 forever. Keying on
+   * clientId (which survives the save) makes it run when a genuinely different
+   * task is opened, and not otherwise.
+   */
+  const loadedClientId = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      loadedClientId.current = null;
+      return;
+    }
+
     const next = task ?? newEditableTask(0);
+    if (loadedClientId.current === next.clientId) return;
+    loadedClientId.current = next.clientId;
+
+    setIsNew(!next.taskId);
+    setStep(next.taskId ? initialStep : "details");
     setCategory(next.category);
     setSubtype(next.subtype);
     setPhotos(next.photos);
+    setSavedTaskId(next.taskId);
     setFormError(null);
     form.reset({ data: next.data });
-  }, [open, task, form]);
+  }, [open, task, initialStep, form]);
 
   function handleCategoryChange(value: string) {
     if (!isTaskCategory(value)) return;
@@ -152,26 +195,16 @@ export function TaskEditorDialog({
     form.reset({ data: createTaskDefaults(value) });
   }
 
-  async function onSubmit(values: { data: Record<string, unknown> }) {
+  /** Step 1 submit — persists the task row, then moves to photos. */
+  async function onSubmitDetails(values: { data: Record<string, unknown> }) {
     setFormError(null);
 
-    const payload: EditableTask = {
-      taskId: task?.taskId ?? null,
+    const result = await saveTask(jobId, {
+      taskId: savedTaskId,
       clientId: task?.clientId ?? newClientId(),
-      category,
       subtype,
       sortOrder: task?.sortOrder ?? 0,
       data: values.data,
-      photos,
-    };
-
-    const result = await saveTask(jobId, {
-      taskId: payload.taskId,
-      clientId: payload.clientId,
-      subtype: payload.subtype,
-      sortOrder: payload.sortOrder,
-      data: payload.data,
-      photos: payload.photos,
     });
 
     if (!result.ok) {
@@ -179,134 +212,272 @@ export function TaskEditorDialog({
       return;
     }
 
-    onSaved({ ...payload, taskId: result.data.taskId });
-    onOpenChange(false);
+    setSavedTaskId(result.data.taskId);
+
+    onSaved({
+      taskId: result.data.taskId,
+      clientId: task?.clientId ?? newClientId(),
+      category,
+      subtype,
+      sortOrder: task?.sortOrder ?? 0,
+      data: values.data,
+      photos,
+    });
+
+    setStep("photos");
   }
 
-  // A task must exist before photos can be uploaded, because the R2 key and the
-  // server-side permission check are both keyed on the task id.
-  const canUploadPhotos = Boolean(task?.taskId);
+  /**
+   * Persist photo rows as soon as the set changes. The bytes are already in R2,
+   * so waiting until the dialog closes would risk orphaning them.
+   */
+  async function handlePhotosChange(next: UploadedPhoto[]) {
+    setPhotos(next);
+    if (!savedTaskId) return;
+
+    setIsSavingPhotos(true);
+    const result = await saveTaskPhotos(jobId, savedTaskId, next);
+    setIsSavingPhotos(false);
+
+    if (!result.ok) {
+      toast.error("Could not save the photos", { description: result.error });
+      return;
+    }
+
+    onSaved({
+      taskId: savedTaskId,
+      clientId: task?.clientId ?? newClientId(),
+      category,
+      subtype,
+      sortOrder: task?.sortOrder ?? 0,
+      data: form.getValues("data"),
+      photos: next,
+    });
+  }
+
+  const isBusy = form.formState.isSubmitting || isSavingPhotos;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (isBusy) return; // don't abandon an in-flight save
+        onOpenChange(next);
+      }}
+    >
       <DialogContent className="max-h-[92svh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{task?.taskId ? "Edit task" : "Add inspection task"}</DialogTitle>
+          <DialogTitle>{isNew ? "Add inspection task" : "Edit task"}</DialogTitle>
           <DialogDescription>
-            Choose what kind of task this is; the form below adapts to your selection.
+            {step === "details"
+              ? "Choose what kind of task this is; the form below adapts to your selection."
+              : "Attach photographs of what you inspected. They upload as you choose them."}
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-5 sm:grid-cols-2">
-            {formError ? (
-              <Alert variant="destructive" className="sm:col-span-2">
-                <AlertDescription>{formError}</AlertDescription>
-              </Alert>
+        <StepIndicator step={step} onBack={() => setStep("details")} canGoBack={!isBusy} />
+
+        {step === "details" ? (
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmitDetails)}
+              className="grid gap-5 sm:grid-cols-2"
+            >
+              {formError ? (
+                <Alert variant="destructive" className="sm:col-span-2">
+                  <AlertDescription>{formError}</AlertDescription>
+                </Alert>
+              ) : null}
+
+              <FormItem>
+                <FormLabel>
+                  Category<span className="text-destructive">*</span>
+                </FormLabel>
+                <Select value={category} onValueChange={handleCategoryChange}>
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {TASK_CATEGORIES.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {CATEGORY_LABELS[value]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormItem>
+
+              <FormItem>
+                <FormLabel>
+                  Type<span className="text-destructive">*</span>
+                </FormLabel>
+                {/*
+                  Keyed on the category so the whole Select remounts when the
+                  category changes. Without this it re-renders once holding the
+                  new value against the old item list, which makes Radix reset
+                  the value to "".
+                */}
+                <Select key={category} value={subtype} onValueChange={handleSubtypeChange}>
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {SUBTYPES_BY_CATEGORY[category].map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {SUBTYPE_LABELS[value]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormDescription>{spec.description}</FormDescription>
+              </FormItem>
+
+              <Separator className="sm:col-span-2" />
+
+              {/* Every field below is rendered from the shared spec. */}
+              {spec.fields
+                .filter((field) => field.kind !== "photos")
+                .map((field) => (
+                  <DynamicField
+                    key={field.name}
+                    spec={field}
+                    control={form.control}
+                    namePrefix="data."
+                  />
+                ))}
+
+              <DialogFooter className="sm:col-span-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isBusy}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isBusy}>
+                  {form.formState.isSubmitting ? <Loader2 className="animate-spin" /> : null}
+                  {isNew ? "Save and add photos" : "Save and continue"}
+                  <ArrowRight />
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        ) : (
+          <div className="flex flex-col gap-5">
+            <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-foreground font-medium">
+                {CATEGORY_LABELS[category]} · {SUBTYPE_LABELS[subtype]}
+              </span>
+              <span>saved.</span>
+            </div>
+
+            {savedTaskId ? (
+              <PhotoUploader
+                jobId={jobId}
+                taskId={savedTaskId}
+                value={photos}
+                onChange={(next) => void handlePhotosChange(next)}
+                maxFiles={
+                  spec.fields.find((field) => field.kind === "photos")?.maxFiles ?? undefined
+                }
+              />
             ) : null}
 
-            <FormItem>
-              <FormLabel>
-                Category<span className="text-destructive">*</span>
-              </FormLabel>
-              <Select value={category} onValueChange={handleCategoryChange}>
-                <FormControl>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {TASK_CATEGORIES.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {CATEGORY_LABELS[value]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormItem>
+            <p className="text-muted-foreground text-balance text-sm">
+              Photos are saved to this task as soon as each upload finishes — you can close this
+              dialog at any point without losing them.
+            </p>
 
-            <FormItem>
-              <FormLabel>
-                Type<span className="text-destructive">*</span>
-              </FormLabel>
-              {/*
-                Keyed on the category so the whole Select remounts when the
-                category changes. Without this it re-renders once holding the
-                new value against the old item list, which makes Radix reset
-                the value to "".
-              */}
-              <Select key={category} value={subtype} onValueChange={handleSubtypeChange}>
-                <FormControl>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {SUBTYPES_BY_CATEGORY[category].map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {SUBTYPE_LABELS[value]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormDescription>{spec.description}</FormDescription>
-            </FormItem>
-
-            <Separator className="sm:col-span-2" />
-
-            {/* Every field below is rendered from the shared spec. */}
-            {spec.fields
-              .filter((field) => field.kind !== "photos")
-              .map((field) => (
-                <DynamicField
-                  key={field.name}
-                  spec={field}
-                  control={form.control}
-                  namePrefix="data."
-                />
-              ))}
-
-            <FormField
-              control={form.control}
-              name="data"
-              render={() => (
-                <FormItem className="sm:col-span-2">
-                  <FormLabel>Photos</FormLabel>
-                  {canUploadPhotos ? (
-                    <PhotoUploader
-                      jobId={jobId}
-                      taskId={task!.taskId!}
-                      value={photos}
-                      onChange={setPhotos}
-                    />
-                  ) : (
-                    <p className="text-muted-foreground text-balance rounded-md border border-dashed p-4 text-sm">
-                      Save this task first — photos are stored against it, so it needs to exist
-                      before they can be uploaded.
-                    </p>
-                  )}
-                </FormItem>
-              )}
-            />
-
-            <DialogFooter className="sm:col-span-2">
+            <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={form.formState.isSubmitting}
+                onClick={() => setStep("details")}
+                disabled={isBusy}
               >
-                Cancel
+                <ArrowLeft /> Back to details
               </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? <Loader2 className="animate-spin" /> : null}
-                {task?.taskId ? "Save task" : "Add task"}
+              <Button type="button" onClick={() => onOpenChange(false)} disabled={isBusy}>
+                {isSavingPhotos ? <Loader2 className="animate-spin" /> : <Check />}
+                Done
               </Button>
             </DialogFooter>
-          </form>
-        </Form>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Two-dot progress header, matching the job wizard's step styling. */
+function StepIndicator({
+  step,
+  onBack,
+  canGoBack,
+}: {
+  step: TaskEditorStep;
+  onBack: () => void;
+  canGoBack: boolean;
+}) {
+  const steps = [
+    { id: "details" as const, label: "Task details", icon: null },
+    { id: "photos" as const, label: "Photos", icon: ImagePlus },
+  ];
+
+  const currentIndex = steps.findIndex((item) => item.id === step);
+
+  return (
+    <ol className="mb-1 flex items-center gap-2">
+      {steps.map((item, index) => {
+        const isComplete = index < currentIndex;
+        const isCurrent = index === currentIndex;
+
+        return (
+          <li key={item.id} className="flex flex-1 items-center gap-2">
+            <button
+              type="button"
+              // Only the completed step is clickable, and only when idle.
+              onClick={isComplete && canGoBack ? onBack : undefined}
+              disabled={!isComplete || !canGoBack}
+              className={cn(
+                "flex items-center gap-2 rounded-md text-sm",
+                isComplete && canGoBack && "hover:text-foreground cursor-pointer",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-medium",
+                  isComplete && "border-primary bg-primary text-primary-foreground",
+                  isCurrent && "border-primary text-primary",
+                  !isComplete && !isCurrent && "text-muted-foreground",
+                )}
+                aria-hidden
+              >
+                {isComplete ? <Check className="size-3" /> : index + 1}
+              </span>
+              <span
+                className={cn("font-medium", !isCurrent && !isComplete && "text-muted-foreground")}
+              >
+                {item.label}
+                {isCurrent ? <span className="sr-only"> (current step)</span> : null}
+              </span>
+            </button>
+
+            {index < steps.length - 1 ? (
+              <div
+                className={cn("h-px flex-1", isComplete ? "bg-primary" : "bg-border")}
+                aria-hidden
+              />
+            ) : null}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
